@@ -2,6 +2,14 @@ const path = require("path");
 const fs = require("fs");
 const { program } = require("commander");
 
+function getNextExpenseId(expenses) {
+  if (expenses.length === 0) {
+    return 1;
+  }
+  const maxId = Math.max(...expenses.map((expense) => expense.id));
+  return maxId + 1;
+}
+
 function addExpense(total, category, date) {
   let expenses = [];
   if (fs.existsSync("expenses.json")) {
@@ -9,12 +17,11 @@ function addExpense(total, category, date) {
     expenses = JSON.parse(data);
   }
 
-  const expense = { total, category, date };
-
+  const expense = { id: getNextExpenseId(expenses), total, category, date };
   expenses.push(expense);
 
   fs.writeFileSync("expenses.json", JSON.stringify(expenses, null, 2));
-  console.log("Expense added successfully.");
+  console.log("Expense added successfully with ID:", expense.id);
 }
 
 function searchExpenseByCategory(category) {
@@ -37,9 +44,14 @@ function deleteExpenseById(id) {
     const data = fs.readFileSync("expenses.json", "utf-8");
     let expenses = JSON.parse(data);
 
-    expenses = expenses.filter((expense) => expense.id !== id);
-    fs.writeFileSync("expenses.json", JSON.stringify(expenses, null, 2));
-    console.log("Expense deleted successfully.");
+    const index = expenses.findIndex((expense) => expense.id === id);
+    if (index !== -1) {
+      expenses.splice(index, 1);
+      fs.writeFileSync("expenses.json", JSON.stringify(expenses, null, 2));
+      console.log("Expense with ID", id, "deleted successfully.");
+    } else {
+      console.log("Expense with ID", id, "not found.");
+    }
   } else {
     console.log("No expenses found.");
   }
@@ -56,7 +68,7 @@ program.command("search <category>").action((category) => {
 });
 
 program.command("delete <id>").action((id) => {
-  deleteExpenseById(id);
+  deleteExpenseById(parseInt(id));
 });
 
 program.parse(process.argv);
